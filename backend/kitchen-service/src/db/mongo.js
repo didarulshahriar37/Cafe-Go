@@ -1,8 +1,11 @@
 const { MongoClient } = require('mongodb');
 
-// In production, always use environment variables. 
-// Falling back to provided URI for development/hackathon purposes.
-const uri = process.env.MONGO_URI || "mongodb+srv://cafe_go_db:ulA7hof1EcajUPYm@cluster0.spgu1hn.mongodb.net/?appName=Cluster0";
+const uri = process.env.MONGO_URI;
+
+if (!uri) {
+    console.error('❌ FATAL ERROR: MONGO_URI is not defined in environment variables.');
+    process.exit(1);
+}
 
 let client = null;
 let dbInstance = null;
