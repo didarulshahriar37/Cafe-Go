@@ -97,6 +97,13 @@ async function reserveStock(items, idempotencyKey) {
     return finalResponse;
 }
 
+async function getInventory() {
+    const db = getDB();
+    const inventoryCollection = db.collection('inventory');
+    return await inventoryCollection.find({}).toArray();
+}
+
 module.exports = {
-    reserveStock
+    reserveStock,
+    getInventory
 };

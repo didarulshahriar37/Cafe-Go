@@ -1,4 +1,13 @@
-const { reserveStock } = require('../services/stock.srv');
+const { reserveStock, getInventory } = require('../services/stock.srv');
+
+async function listItems(req, res, next) {
+    try {
+        const items = await getInventory();
+        return res.status(200).json(items);
+    } catch (error) {
+        next(error);
+    }
+}
 
 async function handleCheckout(req, res, next) {
     try {
@@ -28,5 +37,6 @@ async function handleCheckout(req, res, next) {
 }
 
 module.exports = {
-    handleCheckout
+    handleCheckout,
+    listItems
 };
