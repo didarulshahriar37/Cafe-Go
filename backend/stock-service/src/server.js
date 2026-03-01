@@ -7,15 +7,18 @@ const PORT = process.env.PORT || 3001;
 
 async function startServer() {
     try {
-        // Initialize connections before accepting HTTP traffic
         await connectDB('cafe_inventory');
-        await connectRedis();
+
+        try {
+            await connectRedis();
+        } catch (e) {
+            console.warn('⚠️ Stock Service Redis connection failed. Cache disabled.');
+        }
 
         const server = app.listen(PORT, () => {
             console.log(`🚀 Stock Service is running on port ${PORT}`);
         });
 
-        // Graceful Shutdown Support
         const shutdown = async () => {
             console.log('🛑 Shutting down gracefully...');
             server.close(async () => {

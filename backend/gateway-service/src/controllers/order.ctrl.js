@@ -11,6 +11,11 @@ async function handlePlaceOrder(req, res, next) {
             return res.status(400).json({ error: 'Order must contain valid items.' });
         }
 
+        // Only students can place orders
+        if (req.user.role !== 'student') {
+            return res.status(403).json({ error: 'Acclaimed account type (Admin) is not permitted to place orders. Please use a student account.' });
+        }
+
         // req.user is guaranteed to exist attached by the verifyAuthToken middleware
         const orderResult = await orchestrateOrder(req.user, items, idempotencyKey);
 

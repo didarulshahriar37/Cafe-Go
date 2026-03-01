@@ -1,21 +1,49 @@
 const { createClient } = require('redis');
 
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-const redisClient = createClient({ url: redisUrl });
+let redisClient = createClient({ url: redisUrl });
+let isFallbackMock = false;
 
-redisClient.on('error', (err) => console.error('❌ Redis Gateway Client Error:', err));
-redisClient.on('connect', () => console.log('✅ Redis Gateway Client Connected'));
+// Minimal mock implementation
+const mockRedis = {
+    isOpen: true,
+    connect: async () => { console.warn('⚠️ Using Mock Redis - Connectivity lost'); isFallbackMock = true; },
+    get: async () => null,
+    set: async () => 'OK',
+    setEx: async () => 'OK',
+    del: async () => 0,
+    ping: async () => 'PONG',
+    on: () => { },
+    quit: async () => { }
+};
+
+redisClient.on('error', (err) => {
+    console.error('❌ Redis Gateway Client Error:', err.message);
+    if (!redisClient.isOpen) {
+        console.warn('⚠️ Switching to Mock Redis for continuity.');
+        isFallbackMock = true;
+    }
+});
 
 async function connectRedis() {
-    if (!redisClient.isOpen) {
-        await redisClient.connect();
+    if (isFallbackMock) return mockRedis;
+    try {
+        if (!redisClient.isOpen) {
+            await redisClient.connect();
+        }
+        return redisClient;
+    } catch (e) {
+        console.warn('⚠️ Redis Connection Failed. Falling back to Mock.');
+        isFallbackMock = true;
+        return mockRedis;
     }
-    return redisClient;
 }
 
 function getRedis() {
+    if (isFallbackMock) return mockRedis;
     if (!redisClient.isOpen) {
-        throw new Error('Redis not connected yet!');
+        console.warn('⚠️ Redis accessor called before connection. Using Mock.');
+        return mockRedis;
     }
     return redisClient;
 }

@@ -10,14 +10,14 @@ const server = http.createServer(app);
 
 async function startServer() {
     try {
-        // Initialize WebSockets
         initSocket(server);
 
-        // Connect to RabbitMQ
-        await connectRabbitMQ();
-
-        // Start consuming messages and pipe them to WebSockets
-        startConsuming(notifyStatusUpdate);
+        try {
+            await connectRabbitMQ();
+            startConsuming(notifyStatusUpdate);
+        } catch (e) {
+            console.warn('⚠️ Notification service RabbitMQ failed. Real-time updates disabled.');
+        }
 
         server.listen(PORT, () => {
             console.log(`🔔 Notification Service (WebSocket) active on port ${PORT}`);

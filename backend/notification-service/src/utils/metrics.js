@@ -27,12 +27,12 @@ const metricsMiddleware = (req, res, next) => {
 const getMetrics = (serviceName) => {
     return {
         service: serviceName,
-        uptime: ${Math.round((Date.now() - metrics.startTime) / 1000)}s,
+        uptime: `${Math.round((Date.now() - metrics.startTime) / 1000)}s`,
         total_requests: metrics.totalRequests,
         failed_requests: metrics.failures,
         avg_response_time_ms: metrics.avgResponseTime.toFixed(2),
-        success_rate: metrics.totalRequests > 0 
-            ? ${(((metrics.totalRequests - metrics.failures) / metrics.totalRequests) * 100).toFixed(2)}% 
+        success_rate: metrics.totalRequests > 0
+            ? `${(((metrics.totalRequests - metrics.failures) / metrics.totalRequests) * 100).toFixed(2)}%`
             : '100%'
     };
 };

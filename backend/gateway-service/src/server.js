@@ -1,5 +1,6 @@
 require('dotenv').config();
 const app = require('./app');
+const { connectDB } = require('./db/mongo');
 const { connectRedis } = require('./db/redis');
 const { connectRabbitMQ } = require('./db/rabbitmq');
 
@@ -7,8 +8,22 @@ const PORT = process.env.PORT || 8080;
 
 async function startServer() {
     try {
-        await connectRedis();
-        await connectRabbitMQ();
+        await connectDB('cafe_platform');
+
+        // Optional Infra (Graceful Degradation)
+        try {
+            await connectRedis();
+            console.log('✅ Connected to Redis successfully');
+        } catch (e) {
+            console.warn('⚠️ Redis not available. Performance might be degraded.');
+        }
+
+        try {
+            await connectRabbitMQ();
+            console.log('✅ Connected to RabbitMQ successfully');
+        } catch (e) {
+            console.warn('⚠️ RabbitMQ not available. Orders might not process in background.');
+        }
 
         // Ensure Firebase gets initialized early (lazy init triggered)
         // require('./middleware/auth').getFirebase();

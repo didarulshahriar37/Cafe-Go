@@ -8,11 +8,14 @@ const PORT = process.env.PORT || 3002;
 
 async function startServer() {
     try {
-        await connectDB();
-        await connectRabbitMQ();
+        await connectDB('cafe_orders');
 
-        // Start the background consumer
-        await startConsuming(processOrder);
+        try {
+            await connectRabbitMQ();
+            await startConsuming(processOrder);
+        } catch (e) {
+            console.warn('⚠️ Kitchen RabbitMQ connection failed. Service is up but idle.');
+        }
 
         app.listen(PORT, () => {
             console.log(`🍳 Kitchen Service active on port ${PORT}`);

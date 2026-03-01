@@ -7,11 +7,13 @@ const healthRoute = require('./routes/health');
 const metricsRoute = require('./routes/metrics');
 
 const { metricsMiddleware } = require('./utils/metrics');
+const { chaosMiddleware } = require('./utils/chaos');
 
 const app = express();
 
 // Middleware
 app.use(metricsMiddleware);
+app.use(chaosMiddleware);
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
@@ -19,7 +21,7 @@ app.use(express.json());
 // Routes
 app.use('/', healthRoute);
 app.use('/', metricsRoute);
-app.use('/api/stock', stockRoutes);
+app.use('/', stockRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
