@@ -1,14 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const client = require('prom-client');
+const { getMetrics } = require('../utils/metrics');
 
-// Initialize Prometheus metrics registry
-const register = new client.Registry();
-client.collectDefaultMetrics({ register });
-
-router.get('/metrics', async (req, res) => {
-    res.set('Content-Type', register.contentType);
-    res.end(await register.metrics());
+router.get('/metrics', (req, res) => {
+    res.json(getMetrics('stock-service'));
 });
 
 module.exports = router;

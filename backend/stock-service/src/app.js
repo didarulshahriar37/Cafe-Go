@@ -6,9 +6,12 @@ const stockRoutes = require('./routes/index');
 const healthRoute = require('./routes/health');
 const metricsRoute = require('./routes/metrics');
 
+const { metricsMiddleware } = require('./utils/metrics');
+
 const app = express();
 
 // Middleware
+app.use(metricsMiddleware);
 app.use(helmet());
 app.use(cors());
 app.use(express.json());

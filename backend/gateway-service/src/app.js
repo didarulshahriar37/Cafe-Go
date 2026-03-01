@@ -8,8 +8,11 @@ const apiRoutes = require('./routes/index');
 const healthRoute = require('./routes/health');
 const metricsRoute = require('./routes/metrics');
 
+const { metricsMiddleware } = require('./utils/metrics');
+
 const app = express();
 
+app.use(metricsMiddleware);
 app.use(helmet());
 app.use(cors());
 // Exclude proxy routes from body-parser since proxying requires streaming bodies
