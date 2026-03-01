@@ -7,7 +7,7 @@ const client = new MongoClient(uri);
 const items = [
     {
         title: "Classic Beef Burger",
-        description: "Juicy prime beef patty with melted cheddar, crisp lettuce, and our secret Luna sauce on a toasted brioche bun.",
+        description: "Juicy prime beef patty with melted cheddar, crisp lettuce, and our secret CafeGo signature sauce on a toasted brioche bun.",
         price: 12.50,
         stock: 50,
         category: "Iftar Special",

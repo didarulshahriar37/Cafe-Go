@@ -101,7 +101,7 @@ export default function MenuDashboard() {
             <div className="lg:col-span-2 space-y-8">
                 <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-white tracking-tight">Moonlight <span className="text-amber-500">Menu</span></h1>
+                        <h1 className="text-3xl font-extrabold text-white tracking-tight">CafeGo <span className="text-amber-500">Menu</span></h1>
                         <p className="text-slate-400 mt-1">Select your Iftar or Suhoor favorites.</p>
                     </div>
 

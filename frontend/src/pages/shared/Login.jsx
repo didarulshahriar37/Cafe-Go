@@ -60,13 +60,13 @@ export default function Login() {
                 >
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold uppercase tracking-[0.2em] mb-8">
                         <Star className="w-3 h-3 fill-amber-500" />
-                        <span>Ramadan Cafe System</span>
+                        <span>CafeGo Platform</span>
                     </div>
 
                     <h1 className="text-5xl lg:text-7xl font-black text-white leading-[1.1] mb-6">
                         Experience the <br />
                         <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-yellow-500">
-                            Luna Magic
+                            CafeGo Magic
                         </span>
                     </h1>
 
@@ -162,7 +162,7 @@ export default function Login() {
                                 disabled={loading}
                                 className="w-full py-4 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black rounded-2xl shadow-xl shadow-amber-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
                             >
-                                {loading ? 'Signing in...' : 'Sign in to Luna'}
+                                {loading ? 'Signing in...' : 'Sign in to CafeGo'}
                                 {!loading && <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
                             </button>
                         </form>

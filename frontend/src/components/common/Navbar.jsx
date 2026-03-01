@@ -13,7 +13,7 @@ export default function Navbar() {
                         <Moon className="w-6 h-6 text-amber-500" />
                     </div>
                     <span className="text-xl font-bold tracking-tight text-white">
-                        Cafe <span className="text-amber-500">Go</span>
+                        Cafe<span className="text-amber-500">Go</span>
                     </span>
                 </div>
 
