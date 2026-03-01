@@ -3,7 +3,9 @@ import {
     onAuthStateChanged,
     signInWithEmailAndPassword,
     signOut,
-    createUserWithEmailAndPassword
+    createUserWithEmailAndPassword,
+    GoogleAuthProvider,
+    signInWithPopup
 } from 'firebase/auth';
 import { auth } from '../services/firebase/firebase.config';
 
@@ -51,6 +53,11 @@ export const AuthProvider = ({ children }) => {
         return signInWithEmailAndPassword(auth, email, password);
     };
 
+    const loginWithGoogle = () => {
+        const provider = new GoogleAuthProvider();
+        return signInWithPopup(auth, provider);
+    };
+
     const signup = (email, password) => {
         return createUserWithEmailAndPassword(auth, email, password);
     };
@@ -63,6 +70,7 @@ export const AuthProvider = ({ children }) => {
         currentUser,
         token, // Raw JWT to attach to Axios headers
         login,
+        loginWithGoogle,
         signup,
         logout,
     };
