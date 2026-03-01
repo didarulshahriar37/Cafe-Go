@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw, ShoppingCart, CheckCircle2, AlertCircle, ShoppingBag, Plus, Minus, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import CafeService from '../../services/api/cafe.service';
 import { useAuth } from '../../context/AuthContext';
 
@@ -11,6 +12,7 @@ export default function MenuDashboard() {
     const [ordering, setOrdering] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
+    const navigate = useNavigate();
 
     const fetchStock = async () => {
         try {
@@ -71,7 +73,12 @@ export default function MenuDashboard() {
             setSuccess(result.message);
             setCart({}); // Clear cart
 
-            // Auto-refresh stock after success
+            // Redirect to tracking page after 1.5 seconds so they see the success message
+            setTimeout(() => {
+                navigate(`/track/${idKey}`);
+            }, 1500);
+
+            // Auto-refresh stock
             setTimeout(fetchStock, 2000);
 
             // Clear success message after 5 seconds
@@ -176,8 +183,8 @@ export default function MenuDashboard() {
                                         disabled={item.stock <= 0}
                                         onClick={() => addToCart(item)}
                                         className={`p-3 rounded-xl transition-all ${item.stock > 0
-                                                ? 'bg-amber-500 text-slate-900 hover:scale-110'
-                                                : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                                            ? 'bg-amber-500 text-slate-900 hover:scale-110'
+                                            : 'bg-slate-700 text-slate-500 cursor-not-allowed'
                                             }`}
                                     >
                                         <Plus className="w-6 h-6" />

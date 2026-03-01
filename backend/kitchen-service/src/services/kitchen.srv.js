@@ -1,4 +1,5 @@
 const { getDB } = require('../db/mongo');
+const { publishStatusUpdate } = require('../db/rabbitmq');
 const client = require('prom-client');
 
 // Metrics
@@ -31,6 +32,12 @@ async function processOrder(orderData) {
         { upsert: true } // Create if doesn't exist (first time kitchen sees it)
     );
 
+    publishStatusUpdate({
+        orderId: orderData.idempotencyKey,
+        status: 'COOKING',
+        userEmail: orderData.userEmail
+    });
+
     // 2. Simulate Culinary Magic (3-5 seconds)
     const delay = Math.floor(Math.random() * (5000 - 3000 + 1) + 3000);
     console.log(`[Kitchen] Cooking order ${orderData.idempotencyKey}... (${delay}ms)`);
@@ -46,6 +53,12 @@ async function processOrder(orderData) {
             }
         }
     );
+
+    publishStatusUpdate({
+        orderId: orderData.idempotencyKey,
+        status: 'READY_FOR_PICKUP',
+        userEmail: orderData.userEmail
+    });
 
     ordersProcessedCounter.inc();
     end();

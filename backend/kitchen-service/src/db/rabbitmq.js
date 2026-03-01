@@ -10,7 +10,8 @@ async function connectRabbitMQ() {
         channel = await connection.createChannel();
 
         await channel.assertQueue('kitchen_orders', { durable: true });
-        // Fair dispatch: don't give more than one message to a worker at a time until they've processed and ack'd
+        await channel.assertQueue('status_updates', { durable: true });
+        // Fair dispatch
         channel.prefetch(1);
 
         console.log('✅ Kitchen RabbitMQ Consumer Connected');
@@ -19,6 +20,13 @@ async function connectRabbitMQ() {
         console.error('❌ Kitchen RabbitMQ Connection Error:', error);
         process.exit(1);
     }
+}
+
+function publishStatusUpdate(data) {
+    if (!channel) return;
+    return channel.sendToQueue('status_updates', Buffer.from(JSON.stringify(data)), {
+        persistent: true
+    });
 }
 
 async function startConsuming(onOrderReceived) {
@@ -51,5 +59,6 @@ async function startConsuming(onOrderReceived) {
 
 module.exports = {
     connectRabbitMQ,
-    startConsuming
+    startConsuming,
+    publishStatusUpdate
 };
