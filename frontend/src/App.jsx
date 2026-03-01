@@ -10,6 +10,7 @@ import StudentLayout from './layouts/StudentLayout';
 import Login from './pages/shared/Login';
 import MenuDashboard from './pages/student/MenuDashboard';
 import OrderTracking from './pages/student/OrderTracking';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 export default function App() {
     return (
@@ -26,6 +27,7 @@ export default function App() {
                         <Route element={<StudentLayout />}>
                             <Route path="/" element={<MenuDashboard />} />
                             <Route path="/track/:orderId" element={<OrderTracking />} />
+                            <Route path="/admin/chaos" element={<AdminDashboard />} />
                         </Route>
 
                         {/* Admin Flow will go here */}

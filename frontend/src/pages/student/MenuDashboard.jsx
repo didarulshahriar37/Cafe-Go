@@ -6,6 +6,7 @@ import CafeService from '../../services/api/cafe.service';
 import { useAuth } from '../../context/AuthContext';
 
 export default function MenuDashboard() {
+    const { userRole } = useAuth();
     const [items, setItems] = useState([]);
     const [cart, setCart] = useState({});
     const [loading, setLoading] = useState(false);
@@ -54,6 +55,10 @@ export default function MenuDashboard() {
     };
 
     const handlePlaceOrder = async () => {
+        if (userRole !== 'student') {
+            setError("Admins are not permitted to place orders. Please log in as a student.");
+            return;
+        }
         if (Object.keys(cart).length === 0) return;
 
         try {
@@ -253,16 +258,16 @@ export default function MenuDashboard() {
                         </div>
 
                         <button
-                            disabled={cartCount === 0 || ordering}
+                            disabled={cartCount === 0 || ordering || userRole !== 'student'}
                             onClick={handlePlaceOrder}
-                            className="luminous-button w-full"
+                            className={`luminous-button w-full ${userRole !== 'student' ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
                         >
                             {ordering ? (
                                 <RefreshCw className="w-5 h-5 animate-spin" />
                             ) : (
                                 <CheckCircle2 className="w-5 h-5" />
                             )}
-                            {ordering ? 'Reserving...' : 'Confirm Order'}
+                            {ordering ? 'Reserving...' : userRole === 'student' ? 'Confirm Order' : 'Student Access Only'}
                         </button>
                     </div>
                 </div>

@@ -18,28 +18,44 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
     const [currentUser, setCurrentUser] = useState(null);
     const [token, setToken] = useState(null);
+    const [userRole, setUserRole] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         // Firebase listener for auth state changes
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // Get the JWT token immediately upon login
-                // Parameter 'true' isn't necessary unless we want to force refresh, 
-                // Firebase automatically manages the 1-hour expiration cycle in the background.
                 const jwtToken = await user.getIdToken();
+                const idTokenResult = await user.getIdTokenResult();
+
+                // Get role from claims or default to student
+                const role = idTokenResult.claims.role || 'student';
+
                 setToken(jwtToken);
                 setCurrentUser(user);
+                setUserRole(role);
 
-                // Keep the token fresh. Firebase automatically refreshes the token behind the scenes, 
-                // but we need to update our React State when it does.
-                user.getIdTokenResult(false).then((idTokenResult) => {
-                    setToken(idTokenResult.token);
-                });
-
+                // Sync with DB
+                try {
+                    const gatewayUrl = import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:8080/api';
+                    await fetch(`${gatewayUrl}/users/sync`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${jwtToken}`
+                        },
+                        body: JSON.stringify({
+                            displayName: user.displayName,
+                            photoURL: user.photoURL
+                        })
+                    });
+                } catch (e) {
+                    console.error('User sync failed:', e);
+                }
             } else {
                 setCurrentUser(null);
                 setToken(null);
+                setUserRole(null);
             }
             setLoading(false);
         });
@@ -68,7 +84,8 @@ export const AuthProvider = ({ children }) => {
 
     const value = {
         currentUser,
-        token, // Raw JWT to attach to Axios headers
+        userRole,
+        token,
         login,
         loginWithGoogle,
         signup,
