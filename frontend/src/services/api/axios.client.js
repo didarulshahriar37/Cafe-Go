@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { auth } from '../firebase/firebase.config';
 
 const apiClient = axios.create({
     baseURL: import.meta.env.VITE_API_GATEWAY_URL,
@@ -8,17 +7,12 @@ const apiClient = axios.create({
     },
 });
 
-// Request Interceptor: Attach Firebase ID Token automatically
+// Request Interceptor: Attach JWT Token automatically from localStorage
 apiClient.interceptors.request.use(
-    async (config) => {
-        const user = auth.currentUser;
-        if (user) {
-            try {
-                const token = await user.getIdToken();
-                config.headers.Authorization = `Bearer ${token}`;
-            } catch (error) {
-                console.error("Failed to get Firebase token", error);
-            }
+    (config) => {
+        const token = localStorage.getItem('cafe_token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
     },
@@ -31,19 +25,17 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
-        const message = error.response?.data?.message || error.message || 'An unexpected error occurred';
+        const message = error.response?.data?.message || error.response?.data?.error || error.message || 'An unexpected error occurred';
 
         // Log errors centrally for observability
         console.error(`[API Error] ${error.config?.url}:`, message);
 
         if (error.response?.status === 401) {
-            // Handle unauthorized (e.g., redirect to login or show modal)
-            console.warn('Session expired or unauthorized. Please re-authenticate.');
-        }
-
-        if (error.response?.status === 409) {
-            // Specific handling for stock conflicts
-            console.warn('Concurrency conflict or insufficient stock.');
+            // Handle unauthorized (session expired or invalid token)
+            console.warn('Session expired or unauthorized. Logging out.');
+            // We can't use useAuth here, but we can clear storage and reload or redirect if needed
+            // localStorage.clear(); 
+            // window.location.href = '/login';
         }
 
         return Promise.reject({

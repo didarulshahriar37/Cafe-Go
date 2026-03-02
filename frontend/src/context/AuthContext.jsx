@@ -1,13 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import {
-    onAuthStateChanged,
-    signInWithEmailAndPassword,
-    signOut,
-    createUserWithEmailAndPassword,
-    GoogleAuthProvider,
-    signInWithPopup
-} from 'firebase/auth';
-import { auth } from '../services/firebase/firebase.config';
+import axios from 'axios';
 
 const AuthContext = createContext();
 
@@ -17,85 +9,59 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
     const [currentUser, setCurrentUser] = useState(null);
-    const [token, setToken] = useState(null);
-    const [userRole, setUserRole] = useState(null);
+    const [token, setToken] = useState(localStorage.getItem('cafe_token'));
+    const [userRole, setUserRole] = useState(localStorage.getItem('cafe_user_role'));
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Firebase listener for auth state changes
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const jwtToken = await user.getIdToken();
-                const idTokenResult = await user.getIdTokenResult();
-
-                // Get role from claims or default to student
-                const role = idTokenResult.claims.role || 'student';
-
-                setToken(jwtToken);
-                setCurrentUser(user);
-                setUserRole(role);
-
-                // Sync with DB
-                try {
-                    let gatewayUrl = import.meta.env.VITE_API_GATEWAY_URL || '';
-                    if (import.meta.env.MODE === 'production' && !gatewayUrl) {
-                        // nothing configured; skip sync to avoid network errors
-                        console.warn('Skipping user sync – no API gateway URL in production');
-                    } else {
-                        // ensure we have the /api prefix
-                        if (!gatewayUrl.endsWith('/api')) {
-                            gatewayUrl = gatewayUrl.replace(/\/$/, '') + '/api';
-                        }
-                        const res = await fetch(`${gatewayUrl}/users/sync`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${jwtToken}`
-                            },
-                            body: JSON.stringify({
-                                displayName: user.displayName,
-                                photoURL: user.photoURL
-                            })
-                        });
-                        if (!res.ok) {
-                            // log details but don't throw – we don't want the
-                            // entire app to crash just because the sync endpoint
-                            // returned a 500.  The error is already visible in
-                            // browser devtools/network tab.
-                            console.warn('User sync returned non-OK status', res.status, await res.text());
-                        }
-                    }
-                } catch (e) {
-                    console.error('User sync failed:', e);
-                }
-            } else {
-                setCurrentUser(null);
-                setToken(null);
-                setUserRole(null);
+        const checkAuth = () => {
+            const savedUser = localStorage.getItem('cafe_user');
+            if (token && savedUser) {
+                setCurrentUser(JSON.parse(savedUser));
             }
             setLoading(false);
-        });
+        };
+        checkAuth();
+    }, [token]);
 
-        // Cleanup subscription on unmount
-        return unsubscribe;
-    }, []);
+    const login = async (email, password) => {
+        try {
+            let gatewayUrl = import.meta.env.VITE_API_GATEWAY_URL || 'http://127.0.0.1:8080/api';
+            // ensure we have the /api prefix
+            if (!gatewayUrl.endsWith('/api')) {
+                gatewayUrl = gatewayUrl.replace(/\/$/, '') + '/api';
+            }
 
-    // Helper functions
-    const login = (email, password) => {
-        return signInWithEmailAndPassword(auth, email, password);
-    };
+            const response = await axios.post(`${gatewayUrl}/login`, { email, password });
+            const { token: jwtToken, user } = response.data;
 
-    const loginWithGoogle = () => {
-        const provider = new GoogleAuthProvider();
-        return signInWithPopup(auth, provider);
-    };
+            localStorage.setItem('cafe_token', jwtToken);
+            localStorage.setItem('cafe_user_role', user.role);
+            localStorage.setItem('cafe_user', JSON.stringify(user));
 
-    const signup = (email, password) => {
-        return createUserWithEmailAndPassword(auth, email, password);
+            setToken(jwtToken);
+            setUserRole(user.role);
+            setCurrentUser(user);
+
+            return user;
+        } catch (error) {
+            console.error('Login failed:', error.response?.data?.error || error.message);
+            throw new Error(error.response?.data?.error || 'Failed to login');
+        }
     };
 
     const logout = () => {
-        return signOut(auth);
+        localStorage.removeItem('cafe_token');
+        localStorage.removeItem('cafe_user_role');
+        localStorage.removeItem('cafe_user');
+        setToken(null);
+        setCurrentUser(null);
+        setUserRole(null);
+    };
+
+    // Placeholder for signup if ever needed
+    const signup = async () => {
+        throw new Error('Self-registration is disabled. Please contact admin.');
     };
 
     const value = {
@@ -103,14 +69,13 @@ export const AuthProvider = ({ children }) => {
         userRole,
         token,
         login,
-        loginWithGoogle,
-        signup,
         logout,
+        signup,
+        loginWithGoogle: () => { throw new Error('Google Login is no longer supported'); }
     };
 
     return (
         <AuthContext.Provider value={value}>
-            {/* Do not render app until Firebase confirms initial auth state */}
             {!loading && children}
         </AuthContext.Provider>
     );
