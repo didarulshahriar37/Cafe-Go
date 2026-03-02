@@ -12,11 +12,9 @@ const { metricsMiddleware } = require('./utils/metrics');
 const { chaosMiddleware } = require('./utils/chaos');
 
 // Database and Infrastructure Connections (Idempotent for Serverless)
-const { connectDB } = require('./db/mongo');
 const { connectRedis } = require('./db/redis');
 const { connectRabbitMQ } = require('./db/rabbitmq');
 
-connectDB('cafe_platform').catch(err => console.error('MongoDB initial connection failed:', err));
 connectRedis().catch(err => console.warn('Redis not available initially.'));
 connectRabbitMQ().catch(err => console.warn('RabbitMQ not available initially.'));
 
@@ -39,10 +37,21 @@ app.use('/', metricsRoute);
 // Reverse Proxy for catalog browsing (no business logic in Gateway for this)
 // Routes directly to stock-service
 // We put this BEFORE express.json() to prevent body-parser from consuming the stream
-app.use('/api/stock', createProxyMiddleware({
+// Reverse Proxy for catalog browsing
+app.use(createProxyMiddleware({
+    pathFilter: '/api/stock',
     target: process.env.STOCK_SERVICE_URL || 'http://127.0.0.1:3001',
     changeOrigin: true,
-    pathRewrite: { '^/api/stock': '' } // Maps /api/stock -> / in target (stock-service)
+    pathRewrite: { '^/api/stock': '' }
+}));
+
+// Route /api/login to dedicated Identity Service
+// Route /api/login to dedicated Identity Service
+app.use(createProxyMiddleware({
+    pathFilter: '/api/login',
+    target: process.env.IDENTITY_SERVICE_URL || 'http://127.0.0.1:3004',
+    changeOrigin: true,
+    pathRewrite: { '^/api/login': '/login' }
 }));
 
 // Order flow logic (with JSON parser since this route expects req.body)

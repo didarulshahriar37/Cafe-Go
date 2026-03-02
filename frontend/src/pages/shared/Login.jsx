@@ -93,7 +93,7 @@ export default function Login() {
                             </div>
                             <div>
                                 <h2 className="text-2xl font-bold text-white">Welcome back</h2>
-                                <p className="text-slate-400 text-sm">Please sign in with your student mail</p>
+                                <p className="text-slate-400 text-sm">Please sign in with your Email</p>
                             </div>
                         </div>
 

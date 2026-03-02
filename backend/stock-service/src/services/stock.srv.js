@@ -31,32 +31,62 @@ async function reserveStock(items, idempotencyKey) {
 
     for (const item of items) {
         const { itemId, quantity } = item;
+        let retries = 3;
+        let itemProcessed = false;
 
-        try {
-            // THE CONCURRENCY CONTROL:
-            // This query ONLY matches a document if the stock is AT LEAST the required quantity.
-            const result = await inventoryCollection.findOneAndUpdate(
-                { _id: new ObjectId(itemId), stock: { $gte: quantity } },
-                { $inc: { stock: -quantity } },
-                { returnDocument: 'after' }
-            );
+        while (retries > 0 && !itemProcessed) {
+            try {
+                // 1. Fetch current document to get initial version
+                const current = await inventoryCollection.findOne({ _id: new ObjectId(itemId) });
+                if (!current) {
+                    transactionFailed = true;
+                    itemProcessed = true; // Break loop
+                    break;
+                }
 
-            if (!result) {
+                if (current.stock < quantity) {
+                    transactionFailed = true;
+                    itemProcessed = true;
+                    break;
+                }
+
+                // 2. Perform Optimistic Update: Match ID and Version
+                const result = await inventoryCollection.findOneAndUpdate(
+                    {
+                        _id: new ObjectId(itemId),
+                        version: current.version,
+                        stock: { $gte: quantity }
+                    },
+                    {
+                        $inc: { stock: -quantity, version: 1 }
+                    },
+                    { returnDocument: 'after' }
+                );
+
+                if (result) {
+                    reservedItems.push({
+                        itemId,
+                        quantity,
+                        title: result.title,
+                        remainingStock: result.stock
+                    });
+                    itemProcessed = true;
+                } else {
+                    // Possible version collision (another request won the lock)
+                    console.log(`[Stock Service] Version collision for item ${itemId}. Retrying... (${retries - 1} left)`);
+                    retries--;
+                    if (retries === 0) transactionFailed = true;
+                }
+
+            } catch (error) {
+                console.error(`[Stock Service] Error processing item ${itemId}:`, error);
                 transactionFailed = true;
+                itemProcessed = true;
                 break;
             }
-
-            reservedItems.push({
-                itemId,
-                quantity,
-                title: result.title,
-                remainingStock: result.stock
-            });
-
-        } catch (error) {
-            transactionFailed = true;
-            break;
         }
+
+        if (transactionFailed) break;
     }
 
     if (transactionFailed) {

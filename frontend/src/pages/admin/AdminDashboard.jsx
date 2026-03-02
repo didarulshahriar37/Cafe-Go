@@ -4,12 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     ShieldAlert, Zap, Globe, Box, ChefHat, Bell,
     ToggleLeft, ToggleRight, Activity,
-    BarChart3, AlertCircle, Clock, Server, RefreshCw
+    BarChart3, AlertCircle, Clock, Server, RefreshCw, ShieldCheck
 } from 'lucide-react';
 
 // Services list is reused; each entry may be overridden by an env var
 const SERVICES = [
     { name: 'Gateway', port: 8080, icon: Globe },
+    { name: 'Identity', port: 3004, icon: ShieldCheck },
     { name: 'Stock', port: 3001, icon: Box },
     { name: 'Kitchen', port: 3002, icon: ChefHat },
     { name: 'Notifications', port: 3003, icon: Bell }
@@ -162,9 +163,34 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MetricCard icon={BarChart3} label="Total Throughput" value={globalRequests} color="amber" />
                 <MetricCard icon={AlertCircle} label="System Failures" value={globalFailures} color="rose" />
-                <MetricCard icon={Clock} label="Avg. Latency" value={`${avgLatency.toFixed(1)}ms`} color="blue" />
+                <MetricCard icon={Clock} label="Avg. System Latency" value={`${avgLatency.toFixed(1)}ms`} color="blue" />
                 <MetricCard icon={Server} label="Healthy Nodes" value={`${Object.values(health).filter(h => h.status === 'UP').length}/${SERVICES.length}`} color="emerald" />
             </div>
+
+            {/* Visual Alert for Gateway Latency (Bonus Challenge) */}
+            <AnimatePresence>
+                {metrics['Gateway']?.avg_response_time_ms > 1000 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="bg-rose-500/20 border border-rose-500/50 p-4 rounded-2xl flex items-center justify-between text-rose-500 shadow-xl shadow-rose-500/10"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-rose-500 flex items-center justify-center text-white shrink-0">
+                                <Zap className="w-6 h-6 animate-pulse" />
+                            </div>
+                            <div>
+                                <h4 className="font-black uppercase tracking-tight text-sm">High Latency Warning</h4>
+                                <p className="text-xs opacity-80">Gateway response time is exceeding 1s. Current: {metrics['Gateway'].avg_response_time_ms}ms</p>
+                            </div>
+                        </div>
+                        <div className="hidden sm:block text-[10px] font-bold uppercase tracking-[0.2em] px-4 py-1 border border-rose-500/30 rounded-full animate-pulse">
+                            Active Breach Alert
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Service Health Grid */}
             <section className="space-y-6">

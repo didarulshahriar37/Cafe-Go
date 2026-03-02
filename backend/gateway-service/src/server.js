@@ -1,6 +1,5 @@
 require('dotenv').config();
 const app = require('./app');
-const { connectDB } = require('./db/mongo');
 const { connectRedis } = require('./db/redis');
 const { connectRabbitMQ } = require('./db/rabbitmq');
 
@@ -8,7 +7,7 @@ const PORT = process.env.PORT || 8080;
 
 async function startServer() {
     try {
-        await connectDB('cafe_platform');
+        // Gateway is now stateless; verification happens via Identity Service or locally via JWT Secret
 
         // Optional Infra (Graceful Degradation)
         try {

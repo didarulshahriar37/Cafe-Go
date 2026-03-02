@@ -50,4 +50,16 @@ async function login(req, res) {
     }
 }
 
-module.exports = { login };
+async function verifyToken(req, res) {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token is required' });
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        res.json({ valid: true, decoded });
+    } catch (err) {
+        res.status(401).json({ valid: false, error: err.message });
+    }
+}
+
+module.exports = { login, verifyToken };

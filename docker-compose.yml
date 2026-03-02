@@ -11,17 +11,34 @@ services:
       - PORT=8080
       - MONGO_URI=mongodb+srv://cafe_go_db:ulA7hof1EcajUPYm@cluster0.spgu1hn.mongodb.net/?appName=Cluster0
       - FIREBASE_ADMIN_CREDENTIALS=./src/config/firebase-admin-key.json
-      - STOCK_SERVICE_URL=https://stock-service-six.vercel.app
+      - STOCK_SERVICE_URL=http://stock-service:3001
+      - IDENTITY_SERVICE_URL=https://identity-service-one.vercel.app
       - KITCHEN_SERVICE_URL=https://kitchen-service-production-58ff.up.railway.app
       - NOTIFICATION_SERVICE_URL=https://notification-service-production-565a.up.railway.app
       - REDIS_URL="rediss://default:AevEAAIncDJmNmNiYTUyZGY3NWU0MzcyYjlhYWRhODc2ZjE4ODcwZHAyNjAzNTY@assured-poodle-60356.upstash.io:6379"
       - RABBITMQ_URL=amqps://wjrnitcj:gWVGIHHBOn8ls2Y-IGhSupGOOmyeud0A@shark.rmq.cloudamqp.com/wjrnitcj
+      - JWT_SECRET=cafe-go-super-secret-key-2026
     networks:
       - cafe-network
     restart: unless-stopped
     depends_on:
       - redis
       - rabbitmq
+      - identity-service
+
+  identity-service:
+    build:
+      context: ./backend/identity-service
+      dockerfile: Dockerfile
+    container_name: identity-service
+    environment:
+      - NODE_ENV=production
+      - PORT=3004
+      - MONGO_URI=mongodb+srv://cafe_go_db:ulA7hof1EcajUPYm@cluster0.spgu1hn.mongodb.net/?appName=Cluster0
+      - JWT_SECRET=cafe-go-super-secret-key-2026
+    networks:
+      - cafe-network
+    restart: unless-stopped
 
   stock-service:
     build:

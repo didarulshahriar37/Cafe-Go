@@ -1,0 +1,42 @@
+name: CafeGo CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-gateway:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/gateway-service/package-lock.json
+      - name: Install dependencies
+        working-directory: backend/gateway-service
+        run: npm install
+      - name: Run tests
+        working-directory: backend/gateway-service
+        run: npm test
+
+  test-stock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/stock-service/package-lock.json
+      - name: Install dependencies
+        working-directory: backend/stock-service
+        run: npm install
+      - name: Run tests
+        working-directory: backend/stock-service
+        run: npm test
