@@ -37,15 +37,38 @@ async function handlePlaceOrder(req, res, next) {
 async function handleGetOrder(req, res, next) {
     try {
         const { id } = req.params;
-        const kitchenUrl = process.env.KITCHEN_SERVICE_URL || 'http://127.0.0.1:3002';
-        const response = await fetch(`${kitchenUrl}/orders/${id}`);
-        const data = await response.json();
 
-        if (!response.ok) {
-            return res.status(response.status).json(data);
+        // 1. Try to fetch from Kitchen Service first (the source of truth for active orders)
+        const kitchenUrl = process.env.KITCHEN_SERVICE_URL || 'http://127.0.0.1:3002';
+        try {
+            const response = await fetch(`${kitchenUrl}/orders/${id}`, { timeout: 3000 });
+            if (response.ok) {
+                const data = await response.json();
+                return res.json(data);
+            }
+        } catch (err) {
+            console.warn(`[Gateway] Kitchen Service unavailable, falling back to cache logic for ${id}`);
         }
 
-        res.json(data);
+        // 2. Fallback: Check Gateway-level idempotency cache in Redis
+        // This is crucial for the first few seconds after placing an order before the kitchen picks it up
+        const { safeRedisGet } = require('../db/redis-safe');
+        const cacheKey = `gateway:idempotency:${id}`;
+        const cachedResponse = await safeRedisGet(cacheKey);
+
+        if (cachedResponse) {
+            const parsed = JSON.parse(cachedResponse);
+            console.log(`[Gateway] Tracking fallback: Found cached order for ID: ${id}`);
+            // Adapt the cached placement data to match the expected tracking format
+            return res.json({
+                ...parsed.details,
+                status: parsed.details.status || 'PENDING_KITCHEN',
+                fromCache: true
+            });
+        }
+
+        res.status(404).json({ error: 'Order not found.' });
+
     } catch (error) {
         console.error('❌ Gateway GetOrder Error:', error);
         next(error);

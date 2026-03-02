@@ -19,22 +19,34 @@ async function processOrder(orderData) {
     const db = getDB();
     const ordersCollection = db.collection('orders');
 
-    // 1. Initial State: Already 'PENDING_KITCHEN' from Gateway
-    // We wait 5 seconds in 'Order Received' state as requested
-    console.log(`[Kitchen] ⏳ Order ${orderData.idempotencyKey} received. Waiting in queue (5s)...`);
-    await new Promise(resolve => setTimeout(resolve, 5000));
-
-    // 2. Transition to 'COOKING' (In the Kitchen)
+    // 1. Immediately save initial order state to database so clients can fetch it
+    console.log(`[Kitchen] 📝 Saving order ${orderData.idempotencyKey} to database...`);
     await ordersCollection.updateOne(
         { idempotencyKey: orderData.idempotencyKey },
         {
             $set: {
                 ...orderData,
-                status: 'COOKING',
+                status: 'PENDING_KITCHEN',
+                createdAt: new Date(),
                 updatedAt: new Date()
             }
         },
         { upsert: true }
+    );
+
+    // 2. Wait 5 seconds in 'Order Received' state as requested
+    console.log(`[Kitchen] ⏳ Order ${orderData.idempotencyKey} received. Waiting in queue (5s)...`);
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    // 3. Transition to 'COOKING' (In the Kitchen)
+    await ordersCollection.updateOne(
+        { idempotencyKey: orderData.idempotencyKey },
+        {
+            $set: {
+                status: 'COOKING',
+                updatedAt: new Date()
+            }
+        }
     );
 
     publishStatusUpdate({

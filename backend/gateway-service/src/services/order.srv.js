@@ -53,7 +53,7 @@ async function orchestrateOrder(user, items, idempotencyKey) {
         timestamp: new Date().toISOString()
     };
 
-    publishToQueue('kitchen_orders', orderPayload);
+    await publishToQueue('kitchen_orders', orderPayload);
 
     // 5. Cache the success response at edge to stop retries dead in their tracks
     const finalResponse = {

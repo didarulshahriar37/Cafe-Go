@@ -17,11 +17,15 @@ class SocketService {
             });
 
             this.socket.on('connect', () => {
-                console.log('✅ Connected to Notification WebSocket');
+                console.log(`✅ Socket connected to: ${NOTIFICATION_SERVICE_URL}`);
             });
 
             this.socket.on('connect_error', (error) => {
-                console.error('❌ Socket Connection Error:', error);
+                console.error(`❌ Socket Error (${NOTIFICATION_SERVICE_URL}):`, error.message);
+            });
+
+            this.socket.on('disconnect', (reason) => {
+                console.log(`🔌 Socket disconnected: ${reason}`);
             });
         }
         return this.socket;
