@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   gateway-service:
     build:
@@ -11,114 +9,106 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=8080
-      - STOCK_SERVICE_URL=http://stock-service:3001
-      - KITCHEN_SERVICE_URL=http://kitchen-service:3002
+      - MONGO_URI=mongodb+srv://cafe_go_db:ulA7hof1EcajUPYm@cluster0.spgu1hn.mongodb.net/?appName=Cluster0
+      - FIREBASE_ADMIN_CREDENTIALS=./src/config/firebase-admin-key.json
+      - STOCK_SERVICE_URL=https://stock-service-six.vercel.app
+      - KITCHEN_SERVICE_URL=https://kitchen-service-production-58ff.up.railway.app
+      - NOTIFICATION_SERVICE_URL=https://notification-service-production-565a.up.railway.app
+      - REDIS_URL="rediss://default:AevEAAIncDJmNmNiYTUyZGY3NWU0MzcyYjlhYWRhODc2ZjE4ODcwZHAyNjAzNTY@assured-poodle-60356.upstash.io:6379"
+      - RABBITMQ_URL=amqps://wjrnitcj:gWVGIHHBOn8ls2Y-IGhSupGOOmyeud0A@shark.rmq.cloudamqp.com/wjrnitcj
     networks:
       - cafe-network
     restart: unless-stopped
     depends_on:
-      - stock-service
-      - kitchen-service
+      - redis
+      - rabbitmq
 
   stock-service:
     build:
       context: ./backend/stock-service
       dockerfile: Dockerfile
     container_name: stock-service
-    expose:
-      - "3001"
     environment:
       - NODE_ENV=production
       - PORT=3001
-      - MONGO_URI=mongodb://mongo:27017/cafe_inventory
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://admin:admin123@rabbitmq:5672
+      - MONGO_URI=mongodb+srv://cafe_go_db:ulA7hof1EcajUPYm@cluster0.spgu1hn.mongodb.net/?appName=Cluster0
+      - REDIS_URL="rediss://default:AevEAAIncDJmNmNiYTUyZGY3NWU0MzcyYjlhYWRhODc2ZjE4ODcwZHAyNjAzNTY@assured-poodle-60356.upstash.io:6379"
+      - RABBITMQ_URL=amqps://wjrnitcj:gWVGIHHBOn8ls2Y-IGhSupGOOmyeud0A@shark.rmq.cloudamqp.com/wjrnitcj
     networks:
       - cafe-network
     restart: unless-stopped
     depends_on:
-      mongo:
-        condition: service_started
-      redis:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
+      - redis
+      - rabbitmq
 
   kitchen-service:
     build:
       context: ./backend/kitchen-service
       dockerfile: Dockerfile
     container_name: kitchen-service
-    expose:
-      - "3002"
     environment:
       - NODE_ENV=production
       - PORT=3002
-      - MONGO_URI=mongodb://mongo:27017/cafe_orders
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://admin:admin123@rabbitmq:5672
+      - MONGO_URI=mongodb+srv://cafe_go_db:ulA7hof1EcajUPYm@cluster0.spgu1hn.mongodb.net/?appName=Cluster0
+      - RABBITMQ_URL=amqps://wjrnitcj:gWVGIHHBOn8ls2Y-IGhSupGOOmyeud0A@shark.rmq.cloudamqp.com/wjrnitcj
     networks:
       - cafe-network
     restart: unless-stopped
     depends_on:
-      mongo:
-        condition: service_started
-      redis:
-        condition: service_started
-      rabbitmq:
-        condition: service_started
+      - rabbitmq
 
   notification-service:
     build:
       context: ./backend/notification-service
       dockerfile: Dockerfile
     container_name: notification-service
-    expose:
-      - "3003"
     environment:
       - NODE_ENV=production
       - PORT=3003
-      - RABBITMQ_URL=amqp://admin:admin123@rabbitmq:5672
+      - RABBITMQ_URL=amqps://wjrnitcj:gWVGIHHBOn8ls2Y-IGhSupGOOmyeud0A@shark.rmq.cloudamqp.com/wjrnitcj
     networks:
       - cafe-network
     restart: unless-stopped
     depends_on:
-      rabbitmq:
-        condition: service_started
+      - rabbitmq
 
-  mongo:
-    image: mongo:6
-    container_name: mongo-db
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_GATEWAY_URL=/api
+        - VITE_NOTIFICATION_SERVICE_URL=/
+        - VITE_FIREBASE_API_KEY=AIzaSyCnahU2p-p37GDkNgUTKJMkVNecF3Py254
+        - VITE_FIREBASE_AUTH_DOMAIN=cafe-go-client.firebaseapp.com
+        - VITE_FIREBASE_PROJECT_ID=cafe-go-client
+        - VITE_FIREBASE_STORAGE_BUCKET=cafe-go-client.firebasestorage.app
+        - VITE_FIREBASE_MESSAGING_SENDER_ID=630661940235
+        - VITE_FIREBASE_APP_ID=1:630661940235:web:3a168f7b81f25bfc03730e
+    container_name: cafe-frontend
     ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
+      - "80:80"
     networks:
       - cafe-network
     restart: unless-stopped
+    depends_on:
+      - gateway-service
 
   redis:
-    image: redis:7
+    image: redis:7-alpine
     container_name: redis-cache
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
     networks:
       - cafe-network
     restart: unless-stopped
 
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:3-management-alpine
     container_name: rabbitmq-broker
     environment:
       - RABBITMQ_DEFAULT_USER=admin
       - RABBITMQ_DEFAULT_PASS=admin123
     ports:
-      - "5672:5672"   # AMQP protocol port
-      - "15672:15672" # Management UI
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - "15672:15672" # Management UI only exposed
     networks:
       - cafe-network
     restart: unless-stopped
@@ -126,9 +116,7 @@ services:
 networks:
   cafe-network:
     driver: bridge
-    name: cafe-network
 
 volumes:
-  mongo_data:
   redis_data:
   rabbitmq_data:

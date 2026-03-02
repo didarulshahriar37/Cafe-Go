@@ -2,9 +2,13 @@ const { MongoClient } = require('mongodb');
 
 const uri = process.env.MONGO_URI;
 
+console.log('📋 Environment Check:');
+console.log(`   MONGO_URI defined: ${!!uri}`);
+console.log(`   MONGO_URI value (first 50 chars): ${uri ? uri.substring(0, 50) + '...' : 'undefined'}`);
+
 if (!uri) {
     console.error('❌ FATAL ERROR: MONGO_URI is not defined in environment variables.');
-    process.exit(1);
+    throw new Error('MONGO_URI missing');
 }
 
 let client = null;
@@ -42,18 +46,18 @@ async function connectDB(dbName) {
         return dbInstance;
     } catch (error) {
         console.error('❌ MongoDB Connection Error:', error.message);
-        // If we can't connect at boot, we should crash the pod so Docker/K8s restarts it
-        process.exit(1);
+        throw error;
     }
 }
 
 /**
- * Get the initialized database instance synchronously.
- * Must be called after connectDB() finishes.
+ * Get the initialized database instance.
+ * Lazy-connects if not already initialized — required for Vercel serverless.
+ * @param {string} dbName - Database name (defaults to 'cafe_inventory')
  */
-function getDB() {
+async function getDB(dbName = 'cafe_inventory') {
     if (!dbInstance) {
-        throw new Error('Database not initialized. Call connectDB() first during server startup.');
+        await connectDB(dbName);
     }
     return dbInstance;
 }

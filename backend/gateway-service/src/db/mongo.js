@@ -14,12 +14,18 @@ async function connectDB(dbName = 'cafe_platform') {
         return dbInstance;
     } catch (error) {
         console.error('❌ Gateway MongoDB Connection Error:', error);
-        process.exit(1);
+        throw error;
     }
 }
 
-function getDB() {
-    if (!dbInstance) throw new Error('DB not initialized');
+/**
+ * Lazy-connect getDB for Vercel serverless compatibility.
+ * Auto-connects if not already initialized.
+ */
+async function getDB(dbName = 'cafe_platform') {
+    if (!dbInstance) {
+        await connectDB(dbName);
+    }
     return dbInstance;
 }
 

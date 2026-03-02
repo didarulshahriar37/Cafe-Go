@@ -10,16 +10,33 @@ router.get('/health', async (req, res) => {
             return res.status(500).json({ status: 'DOWN', chaos: true, service: 'stock-service' });
         }
 
-        const db = getDB();
-        const redis = getRedis();
+        const errors = [];
+        let dbStatus = 'DOWN';
+        let redisStatus = 'DOWN';
 
-        // Check Connections
-        await db.command({ ping: 1 });
-        await redis.ping();
+        try {
+            const db = await getDB();
+            await db.command({ ping: 1 });
+            dbStatus = 'UP';
+        } catch (e) {
+            errors.push(`MongoDB: ${e.message}`);
+        }
 
-        res.status(200).json({ status: 'UP', service: 'stock-service' });
+        try {
+            const redis = getRedis();
+            await redis.ping();
+            redisStatus = 'UP';
+        } catch (e) {
+            errors.push(`Redis: ${e.message}`);
+        }
+
+        if (dbStatus === 'UP' && redisStatus === 'UP') {
+            return res.status(200).json({ status: 'UP', service: 'stock-service', db: dbStatus, redis: redisStatus });
+        }
+
+        res.status(503).json({ status: 'DOWN', service: 'stock-service', db: dbStatus, redis: redisStatus, errors });
     } catch (error) {
-        res.status(503).json({ status: 'DOWN', error: error.message });
+        res.status(503).json({ status: 'DOWN', service: 'stock-service', error: error.message });
     }
 });
 

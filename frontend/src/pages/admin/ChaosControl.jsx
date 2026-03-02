@@ -3,12 +3,27 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { ShieldAlert, Zap, Globe, Github, Box, ChefHat, Bell, ToggleLeft, ToggleRight, Radio } from 'lucide-react';
 
+// Each service may have a deployed URL configured via VITE_<SERVICE>_URL
 const SERVICES = [
     { name: 'Gateway', port: 8080, icon: Globe },
     { name: 'Stock', port: 3001, icon: Box },
     { name: 'Kitchen', port: 3002, icon: ChefHat },
     { name: 'Notifications', port: 3003, icon: Bell }
 ];
+
+function getServiceUrl(service) {
+    const envKey = `VITE_${service.name.toUpperCase()}_URL`;
+    const url = import.meta.env[envKey];
+    if (url) return url.replace(/\/api\/?$/i, ''); // strip "/api" if present
+
+    // If we're running in production the absence of a URL means the
+    // service isn't reachable from the front‑end – don't fall back to
+    // localhost, return null so callers can skip attempting requests.
+    if (import.meta.env.MODE === 'production') {
+        return null;
+    }
+    return `http://localhost:${service.port}`;
+}
 
 export default function ChaosControl() {
     const [health, setHealth] = useState({});
@@ -17,8 +32,14 @@ export default function ChaosControl() {
     const fetchHealth = async () => {
         const results = {};
         for (const service of SERVICES) {
+            const url = getServiceUrl(service);
+            if (!url) {
+                // no configured endpoint for this environment; skip
+                results[service.name] = { status: 'UNKNOWN' };
+                continue;
+            }
             try {
-                const response = await axios.get(`http://localhost:${service.port}/health`, { timeout: 1000 });
+                const response = await axios.get(`${url}/health`, { timeout: 1000 });
                 results[service.name] = response.data;
             } catch (err) {
                 results[service.name] = { status: 'DOWN', chaos: err.response?.data?.chaos };
@@ -34,9 +55,15 @@ export default function ChaosControl() {
     }, []);
 
     const toggleChaos = async (service) => {
+        const url = getServiceUrl(service);
+        if (!url) {
+            console.warn('toggleChaos skipped - no URL for', service.name);
+            return;
+        }
+
         setLoading(prev => ({ ...prev, [service.name]: true }));
         try {
-            await axios.post(`http://localhost:${service.port}/chaos/toggle`);
+            await axios.post(`${url}/chaos/toggle`);
             await fetchHealth();
         } catch (err) {
             console.error(`Failed to toggle chaos for ${service.name}`, err);

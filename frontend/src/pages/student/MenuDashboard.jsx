@@ -19,10 +19,30 @@ export default function MenuDashboard() {
         try {
             setLoading(true);
             setError(null);
+
             const data = await CafeService.checkStock();
-            setItems(data);
+
+            // API should return an array of inventory items, but depending
+            // on environment it might wrap the array in an object (e.g.
+            // { items: [...] }) or return something else on error.  Be
+            // defensive here to avoid crashing the component when
+            // `items.map` is called.
+            let list = [];
+            if (Array.isArray(data)) {
+                list = data;
+            } else if (data && Array.isArray(data.items)) {
+                list = data.items;
+            } else {
+                // anything else is unexpected – convert to empty and
+                // surface an error so the user knows something went wrong.
+                console.warn('Unexpected stock payload', data);
+                setError('Received invalid inventory data from server');
+            }
+
+            setItems(list);
         } catch (err) {
             setError(err.message || 'Failed to sync with stock-service');
+            setItems([]);
         } finally {
             setLoading(false);
         }

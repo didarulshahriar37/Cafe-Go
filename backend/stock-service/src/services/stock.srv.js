@@ -10,7 +10,7 @@ const { ObjectId } = require('mongodb');
  * @returns {Object} result - Success status and reserved items
  */
 async function reserveStock(items, idempotencyKey) {
-    const db = getDB();
+    const db = await getDB();
     const redis = getRedis();
 
     // 1. Idempotency Check
@@ -22,21 +22,6 @@ async function reserveStock(items, idempotencyKey) {
     }
 
     const inventoryCollection = db.collection('inventory');
-
-    // To prevent partial reservations (e.g., getting the burger but not the fries if fries are sold out).
-    // In a full production system, this could happen via 2-phase commits or MongoDB transactions. 
-    // Here we will use a quick transactional approach if inside a replica set, or iterate and verify beforehand.
-    // For simplicity & robustness combining MongoDB and NodeJS: 
-    // We check availability first, then try to apply bulk modifications atomically.
-
-    // Using a MongoDB Session Transaction ensures ATOMIC updates. If any stock update fails 
-    // (like not matching the $gte condition), we abort everything.
-    const client = db.client; // Need to expose client or rely on it from db.mongo.js. Wait, our `getDB` only returns `dbInstance`.
-    // Let's rely on standard atomic Operations with rollback if failed.
-
-    // Alternative approach: Verify all first (read-heavy), then reserve all.
-    // However, that might introduce race conditions between read and write.
-    // The MOST robust way without sessions is to sort by ID (prevent deadlocks), then decrement item by item checking $gte.
 
     const reservedItems = [];
     let transactionFailed = false;
@@ -50,16 +35,13 @@ async function reserveStock(items, idempotencyKey) {
         try {
             // THE CONCURRENCY CONTROL:
             // This query ONLY matches a document if the stock is AT LEAST the required quantity.
-            // If another instance decrements stock first and it drops below 'quantity',
-            // this update will silently return modifiedCount = 0.
             const result = await inventoryCollection.findOneAndUpdate(
                 { _id: new ObjectId(itemId), stock: { $gte: quantity } },
                 { $inc: { stock: -quantity } },
-                { returnDocument: 'after' } // Returns the updated document
+                { returnDocument: 'after' }
             );
 
             if (!result) {
-                // If it returns null, it means there either isn't enough stock or the item doesn't exist.
                 transactionFailed = true;
                 break;
             }
@@ -79,7 +61,6 @@ async function reserveStock(items, idempotencyKey) {
 
     if (transactionFailed) {
         // COMPENSATING TRANSACTION (Rollback)
-        // Release back anything we successfully reserved before the failure hit.
         for (const reserved of reservedItems) {
             await inventoryCollection.updateOne(
                 { _id: new ObjectId(reserved.itemId) },
@@ -98,7 +79,7 @@ async function reserveStock(items, idempotencyKey) {
 }
 
 async function getInventory() {
-    const db = getDB();
+    const db = await getDB();
     const inventoryCollection = db.collection('inventory');
     return await inventoryCollection.find({}).toArray();
 }
@@ -108,7 +89,7 @@ async function getInventory() {
  * Does NOT decrement stock. Perfect for pre-checkout validation.
  */
 async function checkStock(items) {
-    const db = getDB();
+    const db = await getDB();
     const inventoryCollection = db.collection('inventory');
 
     for (const item of items) {

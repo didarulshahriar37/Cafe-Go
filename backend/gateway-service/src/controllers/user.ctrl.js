@@ -5,7 +5,7 @@ async function syncUser(req, res, next) {
     try {
         const { displayName, photoURL } = req.body;
         const { uid, email } = req.user;
-        const db = getDB();
+        const db = await getDB();
         const firebase = getFirebase();
 
         const ADMIN_EMAIL = 'admin@iut-cafe.com';

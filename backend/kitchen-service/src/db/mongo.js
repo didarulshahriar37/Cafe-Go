@@ -4,7 +4,7 @@ const uri = process.env.MONGO_URI;
 
 if (!uri) {
     console.error('❌ FATAL ERROR: MONGO_URI is not defined in environment variables.');
-    process.exit(1);
+    throw new Error('MONGO_URI missing');
 }
 
 let client = null;
@@ -42,8 +42,7 @@ async function connectDB(dbName) {
         return dbInstance;
     } catch (error) {
         console.error('❌ MongoDB Connection Error:', error.message);
-        // If we can't connect at boot, we should crash the pod so Docker/K8s restarts it
-        process.exit(1);
+        throw error;
     }
 }
 

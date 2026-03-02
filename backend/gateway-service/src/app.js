@@ -11,6 +11,15 @@ const metricsRoute = require('./routes/metrics');
 const { metricsMiddleware } = require('./utils/metrics');
 const { chaosMiddleware } = require('./utils/chaos');
 
+// Database and Infrastructure Connections (Idempotent for Serverless)
+const { connectDB } = require('./db/mongo');
+const { connectRedis } = require('./db/redis');
+const { connectRabbitMQ } = require('./db/rabbitmq');
+
+connectDB('cafe_platform').catch(err => console.error('MongoDB initial connection failed:', err));
+connectRedis().catch(err => console.warn('Redis not available initially.'));
+connectRabbitMQ().catch(err => console.warn('RabbitMQ not available initially.'));
+
 const app = express();
 
 app.use(metricsMiddleware);
@@ -19,6 +28,9 @@ app.use(helmet());
 app.use(cors());
 // Exclude proxy routes from body-parser since proxying requires streaming bodies
 app.use(morgan('combined'));
+
+// Root route for deployment verification
+app.get('/', (req, res) => res.json({ status: 'Gateway Service is Live' }));
 
 // Standard routes
 app.use('/', healthRoute);

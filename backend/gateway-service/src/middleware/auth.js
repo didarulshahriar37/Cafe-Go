@@ -6,21 +6,40 @@ const path = require('path');
 let firebaseApp = null;
 function getFirebase() {
     if (!firebaseApp) {
-        // Path mapped from our .env config
-        const credPath = process.env.FIREBASE_ADMIN_CREDENTIALS
-            ? path.resolve(process.cwd(), process.env.FIREBASE_ADMIN_CREDENTIALS)
-            : path.resolve(__dirname, '../config/firebase-admin-key.json');
+        const credentials = process.env.FIREBASE_ADMIN_CREDENTIALS;
+        let serviceAccount;
 
-        if (!fs.existsSync(credPath)) {
-            console.error(`❌ FATAL ERROR: Firebase admin credentials not found at ${credPath}`);
-            process.exit(1);
+        try {
+            // 1. Try to parse as JSON string (standard Vercel/Cloud practice)
+            if (credentials && (credentials.startsWith('{') || credentials.startsWith('['))) {
+                serviceAccount = JSON.parse(credentials);
+            } else {
+                // 2. Fallback to file path
+                const credPath = credentials
+                    ? path.resolve(process.cwd(), credentials)
+                    : path.resolve(__dirname, '../config/firebase-admin-key.json');
+
+                if (fs.existsSync(credPath)) {
+                    serviceAccount = require(credPath);
+                } else {
+                    console.error(`❌ FATAL ERROR: Firebase admin credentials not found at ${credPath}`);
+                    // Don't process.exit(1) in serverless, return null or throw
+                    throw new Error('Firebase credentials missing');
+                }
+            }
+
+            if (!admin.apps.length) {
+                firebaseApp = admin.initializeApp({
+                    credential: admin.credential.cert(serviceAccount)
+                });
+                console.log('✅ Firebase Admin SDK Initialized.');
+            } else {
+                firebaseApp = admin.app();
+            }
+        } catch (error) {
+            console.error('❌ Failed to initialize Firebase:', error.message);
+            throw error;
         }
-
-        const serviceAccount = require(credPath);
-        firebaseApp = admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-        });
-        console.log('✅ Firebase Admin SDK Initialized.');
     }
     return admin;
 }

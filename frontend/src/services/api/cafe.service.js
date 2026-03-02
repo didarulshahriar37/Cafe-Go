@@ -11,7 +11,17 @@ const CafeService = {
     checkStock: async () => {
         try {
             const response = await apiClient.get('/stock');
-            return response.data;
+            // some deployments may wrap the array inside an object, so
+            // normalize the output here as well.  This keeps callers easy.
+            const data = response.data;
+            if (Array.isArray(data)) {
+                return data;
+            }
+            if (data && Array.isArray(data.items)) {
+                return data.items;
+            }
+            // fall back to empty list so the UI doesn't crash
+            return [];
         } catch (error) {
             // Error is already formatted by axios interceptor
             throw error;

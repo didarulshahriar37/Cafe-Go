@@ -7,12 +7,29 @@ import {
     BarChart3, AlertCircle, Clock, Server
 } from 'lucide-react';
 
+// Services list is reused; each entry may be overridden by an env var
 const SERVICES = [
     { name: 'Gateway', port: 8080, icon: Globe },
     { name: 'Stock', port: 3001, icon: Box },
     { name: 'Kitchen', port: 3002, icon: ChefHat },
     { name: 'Notifications', port: 3003, icon: Bell }
 ];
+
+function getServiceUrl(service) {
+    const envKey = `VITE_${service.name.toUpperCase()}_URL`;
+    const url = import.meta.env[envKey];
+    console.log(`[getServiceUrl] ${envKey} = ${url || '(not set)'}`);
+    
+    if (url) return url.replace(/\/api\/?$/i, '');
+
+    if (import.meta.env.MODE === 'production') {
+        console.warn(`[getServiceUrl] ${service.name}: no URL and MODE=production, returning null`);
+        return null;
+    }
+    const fallback = `http://localhost:${service.port}`;
+    console.log(`[getServiceUrl] ${service.name}: using fallback`, fallback);
+    return fallback;
+}
 
 export default function AdminDashboard() {
     const [health, setHealth] = useState({});
@@ -24,20 +41,36 @@ export default function AdminDashboard() {
         const hResults = {};
         const mResults = {};
 
+        console.log('[AdminDashboard] Fetching health/metrics for all services...');
+
         for (const service of SERVICES) {
+            const url = getServiceUrl(service);
+            if (!url) {
+                console.warn(`[AdminDashboard] ${service.name}: no URL configured, skipping`);
+                hResults[service.name] = { status: 'UNKNOWN' };
+                mResults[service.name] = null;
+                continue;
+            }
+            
+            console.log(`[AdminDashboard] ${service.name}: fetching from ${url}`);
+            
             // Fetch Health
             try {
-                const hRes = await axios.get(`http://localhost:${service.port}/health`, { timeout: 1000 });
+                const hRes = await axios.get(`${url}/health`, { timeout: 1000 });
+                console.log(`[AdminDashboard] ${service.name} /health: OK`, hRes.data);
                 hResults[service.name] = hRes.data;
             } catch (err) {
+                console.error(`[AdminDashboard] ${service.name} /health: FAILED`, err.message);
                 hResults[service.name] = { status: 'DOWN', chaos: err.response?.data?.chaos };
             }
 
             // Fetch Metrics
             try {
-                const mRes = await axios.get(`http://localhost:${service.port}/metrics`, { timeout: 1000 });
+                const mRes = await axios.get(`${url}/metrics`, { timeout: 1000 });
+                console.log(`[AdminDashboard] ${service.name} /metrics: OK`);
                 mResults[service.name] = mRes.data;
             } catch (err) {
+                console.warn(`[AdminDashboard] ${service.name} /metrics: FAILED`, err.message);
                 mResults[service.name] = null;
             }
         }
@@ -54,9 +87,15 @@ export default function AdminDashboard() {
     }, []);
 
     const toggleChaos = async (service) => {
+        const url = getServiceUrl(service);
+        if (!url) {
+            console.warn('toggleChaos skipped - no URL for', service.name);
+            return;
+        }
+
         setLoading(prev => ({ ...prev, [service.name]: true }));
         try {
-            await axios.post(`http://localhost:${service.port}/chaos/toggle`);
+            await axios.post(`${url}/chaos/toggle`);
             await fetchData();
         } catch (err) {
             console.error(`Failed to toggle chaos for ${service.name}`, err);
@@ -68,7 +107,10 @@ export default function AdminDashboard() {
     // Global Stats Aggregation
     const globalRequests = Object.values(metrics).reduce((acc, curr) => acc + (curr?.total_requests || 0), 0);
     const globalFailures = Object.values(metrics).reduce((acc, curr) => acc + (curr?.failed_requests || 0), 0);
-    const avgLatency = Object.values(metrics).filter(m => m !== null).reduce((acc, curr) => acc + parseFloat(curr?.avg_response_time_ms || 0), 0) / SERVICES.length;
+    const validLatencies = Object.values(metrics).filter(m => m && m.avg_response_time_ms != null);
+    const avgLatency = validLatencies.length > 0
+        ? validLatencies.reduce((acc, curr) => acc + parseFloat(curr.avg_response_time_ms || 0), 0) / validLatencies.length
+        : 0;
 
     return (
         <div className="pt-28 pb-12 px-4 max-w-7xl mx-auto space-y-10">

@@ -4,12 +4,27 @@ const helmet = require('helmet');
 const { metricsMiddleware, getMetrics } = require('./utils/metrics');
 const { chaosMiddleware, toggleChaos, getChaosState } = require('./utils/chaos');
 
+// Infrastructure Connections
+const { connectRabbitMQ, startConsuming } = require('./db/rabbitmq');
+const { notifyStatusUpdate } = require('./socket');
+
+async function initNotification() {
+    await connectRabbitMQ().catch(err => console.warn('Notification RabbitMQ failed.'));
+    // Consumer setup
+    startConsuming(notifyStatusUpdate);
+}
+
+initNotification();
+
 const app = express();
 app.use(metricsMiddleware);
 app.use(chaosMiddleware);
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+// Root route for deployment verification
+app.get('/', (req, res) => res.json({ status: 'Notification Service is Live' }));
 
 app.get('/health', (req, res) => {
     if (getChaosState()) {

@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+.env
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+gateway.log
+stock.log
+kitchen.log
+notification.log
+error.log
+dist
+build

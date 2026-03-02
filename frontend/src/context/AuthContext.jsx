@@ -37,18 +37,34 @@ export const AuthProvider = ({ children }) => {
 
                 // Sync with DB
                 try {
-                    const gatewayUrl = import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:8080/api';
-                    await fetch(`${gatewayUrl}/users/sync`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${jwtToken}`
-                        },
-                        body: JSON.stringify({
-                            displayName: user.displayName,
-                            photoURL: user.photoURL
-                        })
-                    });
+                    let gatewayUrl = import.meta.env.VITE_API_GATEWAY_URL || '';
+                    if (import.meta.env.MODE === 'production' && !gatewayUrl) {
+                        // nothing configured; skip sync to avoid network errors
+                        console.warn('Skipping user sync – no API gateway URL in production');
+                    } else {
+                        // ensure we have the /api prefix
+                        if (!gatewayUrl.endsWith('/api')) {
+                            gatewayUrl = gatewayUrl.replace(/\/$/, '') + '/api';
+                        }
+                        const res = await fetch(`${gatewayUrl}/users/sync`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${jwtToken}`
+                            },
+                            body: JSON.stringify({
+                                displayName: user.displayName,
+                                photoURL: user.photoURL
+                            })
+                        });
+                        if (!res.ok) {
+                            // log details but don't throw – we don't want the
+                            // entire app to crash just because the sync endpoint
+                            // returned a 500.  The error is already visible in
+                            // browser devtools/network tab.
+                            console.warn('User sync returned non-OK status', res.status, await res.text());
+                        }
+                    }
                 } catch (e) {
                     console.error('User sync failed:', e);
                 }

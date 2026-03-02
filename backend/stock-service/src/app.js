@@ -18,6 +18,9 @@ app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
+// Root route for deployment verification
+app.get('/', (req, res) => res.json({ status: 'Stock Service is Live' }));
+
 // Routes
 app.use('/', healthRoute);
 app.use('/', metricsRoute);
