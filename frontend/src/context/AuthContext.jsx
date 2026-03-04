@@ -27,7 +27,6 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         try {
             let gatewayUrl = import.meta.env.VITE_API_GATEWAY_URL || 'http://127.0.0.1:8080/api';
-            // ensure we have the /api prefix
             if (!gatewayUrl.endsWith('/api')) {
                 gatewayUrl = gatewayUrl.replace(/\/$/, '') + '/api';
             }
@@ -59,7 +58,6 @@ export const AuthProvider = ({ children }) => {
         setUserRole(null);
     };
 
-    // Placeholder for signup if ever needed
     const signup = async () => {
         throw new Error('Self-registration is disabled. Please contact admin.');
     };

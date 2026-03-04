@@ -2,19 +2,11 @@ const { getDB } = require('../db/mongo');
 const { getRedis } = require('../db/redis');
 const { ObjectId } = require('mongodb');
 
-/**
- * Decrement stock safely and atomically utilizing MongoDB
- * 
- * @param {Array} items - Selected items e.g., [{ itemId: "...", quantity: 1 }]
- * @param {string} idempotencyKey - Unique key provided by client/gateway
- * @returns {Object} result - Success status and reserved items
- */
+// decrement stock atomically using optimistic locking
 async function reserveStock(items, idempotencyKey) {
     const db = await getDB();
     const redis = getRedis();
 
-    // 1. Idempotency Check
-    // If we've already processed this key, return immediately
     const cachedResult = await redis.get(`idempotency:stock:${idempotencyKey}`);
     if (cachedResult) {
         console.log(`[Idempotency] Returning cached response for key: ${idempotencyKey}`);
@@ -26,7 +18,7 @@ async function reserveStock(items, idempotencyKey) {
     const reservedItems = [];
     let transactionFailed = false;
 
-    // Sort items by ID to theoretically prevent DB-level deadlocks
+    // sort by id to avoid potential deadlocks under concurrent load
     items.sort((a, b) => a.itemId.localeCompare(b.itemId));
 
     for (const item of items) {
@@ -36,11 +28,10 @@ async function reserveStock(items, idempotencyKey) {
 
         while (retries > 0 && !itemProcessed) {
             try {
-                // 1. Fetch current document to get initial version
                 const current = await inventoryCollection.findOne({ _id: new ObjectId(itemId) });
                 if (!current) {
                     transactionFailed = true;
-                    itemProcessed = true; // Break loop
+                    itemProcessed = true;
                     break;
                 }
 
@@ -50,7 +41,7 @@ async function reserveStock(items, idempotencyKey) {
                     break;
                 }
 
-                // 2. Perform Optimistic Update: Match ID and Version
+                // match on version too - if someone else updated first this returns null and we retry
                 const result = await inventoryCollection.findOneAndUpdate(
                     {
                         _id: new ObjectId(itemId),
@@ -72,7 +63,6 @@ async function reserveStock(items, idempotencyKey) {
                     });
                     itemProcessed = true;
                 } else {
-                    // Possible version collision (another request won the lock)
                     console.log(`[Stock Service] Version collision for item ${itemId}. Retrying... (${retries - 1} left)`);
                     retries--;
                     if (retries === 0) transactionFailed = true;
@@ -90,7 +80,7 @@ async function reserveStock(items, idempotencyKey) {
     }
 
     if (transactionFailed) {
-        // COMPENSATING TRANSACTION (Rollback)
+        // roll back anything we already decremented
         for (const reserved of reservedItems) {
             await inventoryCollection.updateOne(
                 { _id: new ObjectId(reserved.itemId) },
@@ -102,7 +92,7 @@ async function reserveStock(items, idempotencyKey) {
 
     const finalResponse = { success: true, items: reservedItems };
 
-    // Set idempotency key expiring in 24 hours
+    // cache result for 24h so duplicate requests are short-circuited
     await redis.setEx(`idempotency:stock:${idempotencyKey}`, 60 * 60 * 24, JSON.stringify(finalResponse));
 
     return finalResponse;
@@ -114,10 +104,7 @@ async function getInventory() {
     return await inventoryCollection.find({}).toArray();
 }
 
-/**
- * Read-only check for stock availability
- * Does NOT decrement stock. Perfect for pre-checkout validation.
- */
+// read-only check - does not modify stock
 async function checkStock(items) {
     const db = await getDB();
     const inventoryCollection = db.collection('inventory');

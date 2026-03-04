@@ -22,19 +22,12 @@ export default function MenuDashboard() {
 
             const data = await CafeService.checkStock();
 
-            // API should return an array of inventory items, but depending
-            // on environment it might wrap the array in an object (e.g.
-            // { items: [...] }) or return something else on error.  Be
-            // defensive here to avoid crashing the component when
-            // `items.map` is called.
             let list = [];
             if (Array.isArray(data)) {
                 list = data;
             } else if (data && Array.isArray(data.items)) {
                 list = data.items;
             } else {
-                // anything else is unexpected – convert to empty and
-                // surface an error so the user knows something went wrong.
                 console.warn('Unexpected stock payload', data);
                 setError('Received invalid inventory data from server');
             }
@@ -90,23 +83,18 @@ export default function MenuDashboard() {
                 quantity: item.qty
             }));
 
-            // Generate unique idempotency key for this checkout attempt
             const idKey = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
             const result = await CafeService.placeOrder(orderItems, idKey);
 
             setSuccess(result.message);
-            setCart({}); // Clear cart
+            setCart({});
 
-            // Redirect to tracking page after 1.5 seconds so they see the success message
             setTimeout(() => {
                 navigate(`/track/${idKey}`);
             }, 1500);
 
-            // Auto-refresh stock
             setTimeout(fetchStock, 2000);
-
-            // Clear success message after 5 seconds
             setTimeout(() => setSuccess(null), 5000);
 
         } catch (err) {

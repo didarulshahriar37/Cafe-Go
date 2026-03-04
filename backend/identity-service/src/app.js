@@ -8,8 +8,7 @@ const authCtrl = require('./controllers/auth.ctrl');
 
 const app = express();
 
-// Rate Limiter for Login (Bonus Challenge)
-// Restricts to 3 attempts per minute per email/IP
+// 3 attempts per minute per email, mitigates brute-force
 const loginLimiter = rateLimit({
     windowMs: 60 * 1000,
     limit: 3,

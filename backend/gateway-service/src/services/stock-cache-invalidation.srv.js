@@ -1,12 +1,6 @@
 const { safeRedisSetEx } = require('../db/redis-safe');
 const { getSafeRedis } = require('../db/redis-safe');
 
-/**
- * Invalidate stock cache for specific items
- * Called when stock updates occur to prevent stale data
- * 
- * @param {Array} items - Array of {itemId, quantity} objects to invalidate
- */
 async function invalidateStockCache(items) {
     const redis = getSafeRedis();
     if (!redis) {
@@ -16,13 +10,10 @@ async function invalidateStockCache(items) {
 
     try {
         const cacheKeyPrefix = 'gateway:stock:';
-        // Get all stock cache keys
         const keys = await redis.keys(`${cacheKeyPrefix}*`);
 
-        // Filter and delete only relevant keys (that contain the updated items)
         const itemIds = items.map(item => item.itemId);
         const keysToDelete = keys.filter(key => {
-            // Check if any of the updated itemIds are in this cache key
             return itemIds.some(id => key.includes(id));
         });
 
@@ -40,10 +31,7 @@ async function invalidateStockCache(items) {
     }
 }
 
-/**
- * Clear all stock cache entries
- * Useful for cache reset or troubleshooting
- */
+// wipe all cached stock entries - handy for debugging or after major inventory changes
 async function clearAllStockCache() {
     const redis = getSafeRedis();
     if (!redis) {

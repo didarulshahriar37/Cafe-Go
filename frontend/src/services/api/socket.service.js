@@ -37,7 +37,6 @@ class SocketService {
         console.log(`📡 Subscribing to order: ${orderId}`);
         socket.emit('subscribe_order', orderId);
 
-        // Remove listener if it already exists to avoid duplicates
         socket.off('order_status_updated');
 
         socket.on('order_status_updated', (data) => {

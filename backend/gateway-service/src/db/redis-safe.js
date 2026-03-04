@@ -1,10 +1,6 @@
 const { getRedis } = require('../db/redis');
 
-/**
- * Safely get Redis client with graceful error handling
- * Returns null if Redis cannot be accessed (allows operation to continue)
- * This enables graceful degradation if Redis is temporarily down
- */
+// returns null if redis is down so callers can degrade gracefully
 function getSafeRedis() {
     try {
         return getRedis();
@@ -14,10 +10,6 @@ function getSafeRedis() {
     }
 }
 
-/**
- * Safely get from Redis cache
- * Returns null if Redis fails, allowing fallback to database
- */
 async function safeRedisGet(key) {
     const redis = getSafeRedis();
     if (!redis) return null;
@@ -30,10 +22,6 @@ async function safeRedisGet(key) {
     }
 }
 
-/**
- * Safely set to Redis cache
- * Silently fails if Redis is unavailable (doesn't block operation)
- */
 async function safeRedisSetEx(key, ttl, value) {
     const redis = getSafeRedis();
     if (!redis) return false;

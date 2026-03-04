@@ -3,7 +3,6 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { ShieldAlert, Zap, Globe, Github, Box, ChefHat, Bell, ToggleLeft, ToggleRight, Radio } from 'lucide-react';
 
-// Each service may have a deployed URL configured via VITE_<SERVICE>_URL
 const SERVICES = [
     { name: 'Gateway', port: 8080, icon: Globe },
     { name: 'Stock', port: 3001, icon: Box },
@@ -14,11 +13,8 @@ const SERVICES = [
 function getServiceUrl(service) {
     const envKey = `VITE_${service.name.toUpperCase()}_URL`;
     const url = import.meta.env[envKey];
-    if (url) return url.replace(/\/api\/?$/i, ''); // strip "/api" if present
+    if (url) return url.replace(/\/api\/?$/i, '');
 
-    // If we're running in production the absence of a URL means the
-    // service isn't reachable from the front‑end – don't fall back to
-    // localhost, return null so callers can skip attempting requests.
     if (import.meta.env.MODE === 'production') {
         return null;
     }
@@ -34,7 +30,6 @@ export default function ChaosControl() {
         for (const service of SERVICES) {
             const url = getServiceUrl(service);
             if (!url) {
-                // no configured endpoint for this environment; skip
                 results[service.name] = { status: 'UNKNOWN' };
                 continue;
             }

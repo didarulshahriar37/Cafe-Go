@@ -11,7 +11,6 @@ const metricsRoute = require('./routes/metrics');
 const { metricsMiddleware } = require('./utils/metrics');
 const { chaosMiddleware } = require('./utils/chaos');
 
-// Database and Infrastructure Connections (Idempotent for Serverless)
 const { connectRedis } = require('./db/redis');
 const { connectRabbitMQ } = require('./db/rabbitmq');
 
@@ -27,17 +26,12 @@ app.use(cors());
 // Exclude proxy routes from body-parser since proxying requires streaming bodies
 app.use(morgan('combined'));
 
-// Root route for deployment verification
 app.get('/', (req, res) => res.json({ status: 'Gateway Service is Live' }));
 
-// Standard routes
 app.use('/', healthRoute);
 app.use('/', metricsRoute);
 
-// Reverse Proxy for catalog browsing (no business logic in Gateway for this)
-// Routes directly to stock-service
-// We put this BEFORE express.json() to prevent body-parser from consuming the stream
-// Reverse Proxy for catalog browsing
+// proxy to stock-service - must come before express.json() or body gets consumed
 app.use(createProxyMiddleware({
     pathFilter: '/api/stock',
     target: process.env.STOCK_SERVICE_URL || 'http://127.0.0.1:3001',
@@ -45,8 +39,6 @@ app.use(createProxyMiddleware({
     pathRewrite: { '^/api/stock': '' }
 }));
 
-// Route /api/login to dedicated Identity Service
-// Route /api/login to dedicated Identity Service
 app.use(createProxyMiddleware({
     pathFilter: '/api/login',
     target: process.env.IDENTITY_SERVICE_URL || 'http://127.0.0.1:3004',
@@ -54,7 +46,6 @@ app.use(createProxyMiddleware({
     pathRewrite: { '^/api/login': '/login' }
 }));
 
-// Order flow logic (with JSON parser since this route expects req.body)
 app.use('/api', express.json(), apiRoutes);
 
 app.use((err, req, res, next) => {

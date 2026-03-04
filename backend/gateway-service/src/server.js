@@ -7,9 +7,6 @@ const PORT = process.env.PORT || 8080;
 
 async function startServer() {
     try {
-        // Gateway is now stateless; verification happens via Identity Service or locally via JWT Secret
-
-        // Optional Infra (Graceful Degradation)
         try {
             await connectRedis();
             console.log('✅ Connected to Redis successfully');
@@ -24,8 +21,6 @@ async function startServer() {
             console.warn('⚠️ RabbitMQ not available. Orders might not process in background.');
         }
 
-        // Ensure Firebase gets initialized early (lazy init triggered)
-        // require('./middleware/auth').getFirebase();
 
         const server = app.listen(PORT, () => {
             console.log(`🚀 Gateway Service mapping traffic on port ${PORT}`);

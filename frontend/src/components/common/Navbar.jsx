@@ -8,11 +8,7 @@ export default function Navbar() {
     const { currentUser, logout, userRole } = useAuth();
     const [isHealthy, setIsHealthy] = useState(true);
 
-    // Helper to strip an optional "/api" suffix from a URL.  Many
-    // environments set VITE_API_GATEWAY_URL (used for POSTing to
-    // /api/users/sync, etc), but the health endpoint lives outside the
-    // "/api" path.  Rather than force consumers to define both vars,
-    // normalize them here.
+    // strips /api suffix so health check hits the right path
     function normalizeGatewayBase(url) {
         if (!url) return null;
         return url.replace(/\/api\/?$/i, '');
@@ -24,8 +20,6 @@ export default function Navbar() {
                 let gatewayUrl = import.meta.env.VITE_API_GATEWAY_URL || '';
                 gatewayUrl = normalizeGatewayBase(gatewayUrl) || 'http://localhost:8080';
 
-                // If we're in production and the URL is still localhost,
-                // there's nothing to hit; bail early to avoid noise.
                 if (import.meta.env.MODE === 'production' && gatewayUrl.includes('localhost')) {
                     setIsHealthy(false);
                     return;

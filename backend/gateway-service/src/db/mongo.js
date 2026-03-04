@@ -18,10 +18,7 @@ async function connectDB(dbName = 'cafe_platform') {
     }
 }
 
-/**
- * Lazy-connect getDB for Vercel serverless compatibility.
- * Auto-connects if not already initialized.
- */
+// auto-connects on first call, reuses instance after that
 async function getDB(dbName = 'cafe_platform') {
     if (!dbInstance) {
         await connectDB(dbName);
