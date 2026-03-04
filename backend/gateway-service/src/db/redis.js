@@ -4,7 +4,7 @@ const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 let redisClient = createClient({ url: redisUrl });
 let isFallbackMock = false;
 
-// Minimal mock implementation
+// mock fallback when redis is unreachable
 const mockRedis = {
     isOpen: true,
     connect: async () => { console.warn('⚠️ Using Mock Redis - Connectivity lost'); isFallbackMock = true; },

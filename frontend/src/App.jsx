@@ -3,10 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/shared/ProtectedRoute';
 
-// Layouts
 import StudentLayout from './layouts/StudentLayout';
 
-// Pages
 import Login from './pages/shared/Login';
 import MenuDashboard from './pages/student/MenuDashboard';
 import OrderTracking from './pages/student/OrderTracking';
@@ -32,7 +30,7 @@ export default function App() {
 
                     {/* Admin-only Flow */}
                     <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                        <Route element={<StudentLayout />}> {/* Reuse layout or make separate one if needed later */}
+                        <Route element={<StudentLayout />}>
                             <Route path="/admin/chaos" element={<AdminDashboard />} />
                         </Route>
                     </Route>

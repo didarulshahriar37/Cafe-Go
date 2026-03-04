@@ -7,7 +7,6 @@ import {
     BarChart3, AlertCircle, Clock, Server, RefreshCw, ShieldCheck
 } from 'lucide-react';
 
-// Services list is reused; each entry may be overridden by an env var
 const SERVICES = [
     { name: 'Gateway', port: 8080, icon: Globe },
     { name: 'Identity', port: 3004, icon: ShieldCheck },
@@ -55,7 +54,6 @@ export default function AdminDashboard() {
 
             console.log(`[AdminDashboard] ${service.name}: fetching from ${url}`);
 
-            // Fetch Health
             try {
                 const hRes = await axios.get(`${url}/health`, { timeout: 5000 });
                 console.log(`[AdminDashboard] ${service.name} /health: OK`, hRes.data);
@@ -65,7 +63,6 @@ export default function AdminDashboard() {
                 hResults[service.name] = { status: 'DOWN', chaos: err.response?.data?.chaos };
             }
 
-            // Fetch Metrics
             try {
                 const mRes = await axios.get(`${url}/metrics`, { timeout: 5000 });
                 console.log(`[AdminDashboard] ${service.name} /metrics: OK`);
@@ -118,7 +115,6 @@ export default function AdminDashboard() {
         await fetchData();
     };
 
-    // Global Stats Aggregation
     const globalRequests = Object.values(metrics).reduce((acc, curr) => acc + (curr?.total_requests || 0), 0);
     const globalFailures = Object.values(metrics).reduce((acc, curr) => acc + (curr?.failed_requests || 0), 0);
     const validLatencies = Object.values(metrics).filter(m => m && m.avg_response_time_ms != null);

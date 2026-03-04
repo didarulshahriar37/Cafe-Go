@@ -28,7 +28,6 @@ export default function OrderTracking() {
     useEffect(() => {
         if (!orderId) return;
 
-        // 1. Initial Fetch to get CURRENT state (handles refreshes)
         const fetchInitialStatus = async () => {
             try {
                 const response = await apiClient.get(`/orders/${orderId}`);
@@ -44,15 +43,12 @@ export default function OrderTracking() {
 
         fetchInitialStatus();
 
-        // 2. Real-time updates via Socket
         socketService.subscribeToOrder(orderId, (data) => {
             setStatus(data.status);
             setLastUpdate(new Date().toLocaleTimeString());
         });
 
-        return () => {
-            // socketService.unsubscribe(orderId);
-        };
+        return () => {};
     }, [orderId]);
 
     const getCurrentStepIndex = () => {

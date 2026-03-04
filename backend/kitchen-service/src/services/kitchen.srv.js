@@ -19,7 +19,7 @@ async function processOrder(orderData) {
     const db = getDB();
     const ordersCollection = db.collection('orders');
 
-    // 1. Immediately save initial order state to database so clients can fetch it
+    // save initial state immediately so clients can start polling
     console.log(`[Kitchen] 📝 Saving order ${orderData.idempotencyKey} to database...`);
     await ordersCollection.updateOne(
         { idempotencyKey: orderData.idempotencyKey },
@@ -34,11 +34,9 @@ async function processOrder(orderData) {
         { upsert: true }
     );
 
-    // 2. Wait 5 seconds in 'Order Received' state as requested
     console.log(`[Kitchen] ⏳ Order ${orderData.idempotencyKey} received. Waiting in queue (5s)...`);
     await new Promise(resolve => setTimeout(resolve, 5000));
 
-    // 3. Transition to 'COOKING' (In the Kitchen)
     await ordersCollection.updateOne(
         { idempotencyKey: orderData.idempotencyKey },
         {
@@ -55,11 +53,9 @@ async function processOrder(orderData) {
         userEmail: orderData.userEmail
     });
 
-    // 3. Simulate Culinary Magic (7 seconds as requested)
     console.log(`[Kitchen] 🍳 COOKING order ${orderData.idempotencyKey}... (7s)`);
     await new Promise(resolve => setTimeout(resolve, 7000));
 
-    // 4. Final status: READY_FOR_PICKUP
     await ordersCollection.updateOne(
         { idempotencyKey: orderData.idempotencyKey },
         {

@@ -15,7 +15,6 @@ const mockChannel = {
 async function connectRabbitMQ() {
     const rabbitUrl = process.env.RABBITMQ_URL || 'amqp://admin:admin123@localhost:5672';
 
-    // In serverless, we might already have a connection but it might be closed
     if (channel && channel.connection && channel.connection.close) {
         return channel;
     }
@@ -31,7 +30,6 @@ async function connectRabbitMQ() {
     } catch (error) {
         console.error('❌ Gateway RabbitMQ Connection Error:', error.message);
 
-        // Only use mock in LOCAL development or if explicitly allowed (unlikely for production)
         if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
             console.warn('⚠️ Switching to Mock RabbitMQ for local continuity.');
             isFallbackMock = true;
@@ -45,7 +43,6 @@ async function connectRabbitMQ() {
 
 async function publishToQueue(queueName, data) {
     if (!channel || isFallbackMock) {
-        // Try to re-connect if channel is missing or was mock
         await connectRabbitMQ().catch(e => {
             if (!isFallbackMock) throw e;
         });
